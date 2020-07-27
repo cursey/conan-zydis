@@ -14,10 +14,12 @@ int main()
     ZydisDecoder decoder;
     ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_ADDRESS_WIDTH_64);
 
+#ifndef ZYDIS_DISABLE_FORMATTER
     // Initialize formatter. Only required when you actually plan to do instruction
     // formatting ("disassembling"), like we do here
     ZydisFormatter formatter;
     ZydisFormatterInit(&formatter, ZYDIS_FORMATTER_STYLE_INTEL);
+#endif
 
     // Loop over the instructions in our buffer.
     // The runtime-address (instruction pointer) is chosen arbitrary here in order to better
@@ -32,11 +34,15 @@ int main()
         // Print current instruction pointer.
         printf("%016" PRIX64 "  ", runtime_address);
 
+#ifndef ZYDIS_DISABLE_FORMATTER
         // Format & print the binary instruction structure to human readable format
         char buffer[256];
         ZydisFormatterFormatInstruction(&formatter, &instruction, buffer, sizeof(buffer),
                                         runtime_address);
         puts(buffer);
+#else
+        puts("N/A");
+#endif
 
         offset += instruction.length;
         runtime_address += instruction.length;

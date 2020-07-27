@@ -1,4 +1,5 @@
 from conans import ConanFile, CMake, tools
+from textwrap import dedent
 
 
 class ZydisConan(ConanFile):
@@ -10,8 +11,10 @@ class ZydisConan(ConanFile):
     description = "<Description of Zydis here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False]}
-    default_options = "shared=False"
+    options = {"shared": [True, False], "decoder": [True, False], "formatter": [
+        True, False], "avx512": [True, False], "knc": [True, False]}
+    default_options = {"shared": False, "decoder": True,
+                       "formatter": False, "avx512": False, "knc": False}
     generators = "cmake"
 
     def source(self):
@@ -21,13 +24,17 @@ class ZydisConan(ConanFile):
         # in MSVC if the packaged project doesn't have variables to set it
         # properly
         tools.replace_in_file("zydis/CMakeLists.txt", "project(Zydis VERSION 3.1.0.0 LANGUAGES C CXX)",
-                              '''project(Zydis VERSION 3.1.0.0 LANGUAGES C CXX)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()''')
+                              dedent("""project(Zydis VERSION 3.1.0.0 LANGUAGES C CXX)
+                                        include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+                                        conan_basic_setup()"""))
 
     def build(self):
         cmake = CMake(self)
-        cmake.definitions["BUILD_SHARED_LIB"] = self.options.shared
+        cmake.definitions["ZYDIS_BUILD_SHARED_LIB"] = self.options.shared
+        cmake.definitions["ZYDIS_FEATURE_DECODER"] = self.options.decoder
+        cmake.definitions["ZYDIS_FEATURE_FORMATTER"] = self.options.formatter
+        cmake.definitions["ZYDIS_FEATURE_AVX512"] = self.options.avx512
+        cmake.definitions["ZYDIS_FEATURE_KNC"] = self.options.knc
         cmake.definitions["ZYDIS_BUILD_EXAMPLES"] = False
         cmake.definitions["ZYDIS_BUILD_TOOLS"] = False
         cmake.configure(source_folder="zydis")
@@ -57,3 +64,16 @@ conan_basic_setup()''')
 
         if not self.options.shared:
             self.cpp_info.defines.append("ZYDIS_STATIC_DEFINE")
+            self.cpp_info.defines.append("ZYCORE_STATIC_DEFINE")
+
+        if not self.options.decoder:
+            self.cpp_info.defines.append("ZYDIS_DISABLE_DECODER")
+
+        if not self.options.formatter:
+            self.cpp_info.defines.append("ZYDIS_DISABLE_FORMATTER")
+
+        if not self.options.avx512:
+            self.cpp_info.defines.append("ZYDIS_DISABLE_AVX512")
+
+        if not self.options.knc:
+            self.cpp_info.defines.append("ZYDIS_DISABLE_KNC")
